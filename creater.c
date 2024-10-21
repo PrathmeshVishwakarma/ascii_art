@@ -1,6 +1,7 @@
 #include <setjmp.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #define TRY                                                                    \
     do {                                                                       \
@@ -40,10 +41,11 @@ char creater(int x) {
     ETRY;
 }
 
+struct HEADER header;
+struct DIB_HEADER dibheader;
+
 unsigned int *open() {
     FILE *fP = fopen("dog.bmp", "rb");
-    struct HEADER header;
-    struct DIB_HEADER dibheader;
 
     fread(&header.name, 2, 1, fP);
     fread(&header.size, 4, 1, fP);
@@ -66,14 +68,30 @@ unsigned int *open() {
     fread(data, 1, size, fP);
     for (int i = 0; i <= size; i += 3) {
         int average_pixel_value = (data[i] + data[i + 1] + data[i + 2]) / 3;
-        if (i == 0)
-            averaged_data[i] = average_pixel_value;
-        else
-            averaged_data[i / 3] = average_pixel_value;
-        /*printf("%d %d %d %d\n", x, i, i / 3, size / 3);*/ // for debugging,
-                                                            // working as of now
+        averaged_data[i / 3] = average_pixel_value;
+        printf("%d %d %d %d\n", average_pixel_value, i, i / 3,
+               size / 3); // for debugging,
+                          // working as of now
     }
     return averaged_data;
 }
 
-int main() { unsigned int *data = open(); }
+unsigned int **sort(unsigned int *data) {
+    unsigned int **nested_data =
+        malloc(dibheader.height * sizeof(unsigned int *));
+    for (int i = 0; i < dibheader.height; i++)
+        nested_data[i] = malloc(dibheader.width * sizeof(unsigned int));
+    for (int i = 0; i < dibheader.height * dibheader.width;
+         i += dibheader.width) {
+        for (int j = 0; j < dibheader.width; j++) {
+            nested_data[i / dibheader.width][j] = data[i + j];
+        }
+    }
+    return nested_data;
+}
+
+int main() {
+    unsigned int *data = open();
+    unsigned int **nested_data = sort(data);
+    printf("%d", nested_data[2][2]);
+}
