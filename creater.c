@@ -1,5 +1,19 @@
+#include <setjmp.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#define TRY                                                                    \
+    do {                                                                       \
+        jmp_buf ex_buf__;                                                      \
+        if (!setjmp(ex_buf__)) {
+#define CATCH                                                                  \
+    }                                                                          \
+    else {
+#define ETRY                                                                   \
+    }                                                                          \
+    }                                                                          \
+    while (0)
+#define THROW longjmp(ex_buf__, 1)
 
 struct HEADER {
     char name[2];
@@ -18,7 +32,15 @@ struct DIB_HEADER {
     unsigned int image_size;
 };
 
-int main() {
+char creater(int x) {
+    unsigned char characters[] = {'@', '#', 'S', '%', '?', '*',
+                                  '+', ';', ':', ',', '.', ' '};
+    TRY { return characters[x / 23]; }
+    CATCH { return characters[0]; }
+    ETRY;
+}
+
+unsigned int *open() {
     FILE *fP = fopen("dog.bmp", "rb");
     struct HEADER header;
     struct DIB_HEADER dibheader;
@@ -36,13 +58,22 @@ int main() {
 
     fseek(fP, header.starting_address, SEEK_SET);
     printf("%d\n", ftell(fP));
-    unsigned long long int size =
-        ((dibheader.width * dibheader.bits_per_pixel + 31) / 32) * 4 *
-        dibheader.height;
+    int size = ((dibheader.width * dibheader.bits_per_pixel + 31) / 32) * 4 *
+               dibheader.height;
     int padding = dibheader.width % 4;
     unsigned char *data = malloc(size);
+    unsigned int *averaged_data = malloc(size / 3);
     fread(data, 1, size, fP);
-    for (int i = 0; i < size; i++) {
-        printf("%d\n", data[i]);
+    for (int i = 0; i <= size; i += 3) {
+        int average_pixel_value = (data[i] + data[i + 1] + data[i + 2]) / 3;
+        if (i == 0)
+            averaged_data[i] = average_pixel_value;
+        else
+            averaged_data[i / 3] = average_pixel_value;
+        /*printf("%d %d %d %d\n", x, i, i / 3, size / 3);*/ // for debugging,
+                                                            // working as of now
     }
+    return averaged_data;
 }
+
+int main() { unsigned int *data = open(); }
